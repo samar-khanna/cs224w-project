@@ -7,28 +7,28 @@ from graph_sage import GraphSage
 
 
 class GNNStack(torch.nn.Module):
-    def __init__(self, input_dim, hidden_dim, output_dim, args, emb=False):
+    def __init__(self, input_dim, hidden_dim, output_dim, num_layers, dropout, emb=False):
         super(GNNStack, self).__init__()
         conv_model = GraphSage
 
         self.convs = nn.ModuleList()
         self.convs.append(conv_model(input_dim, hidden_dim))
-        assert (args.num_layers >= 1), 'Number of layers is not >=1'
-        for l in range(args.num_layers - 1):
-            self.convs.append(conv_model(args.heads * hidden_dim, hidden_dim))
+        self.dropout = dropout
+        self.num_layers = num_layers
+        self.emb = emb
+
+        assert (self.num_layers >= 1), 'Number of layers is not >=1'
+        for l in range(self.num_layers - 1):
+            self.convs.append(conv_model(hidden_dim, hidden_dim))
 
         # post-message-passing
         self.post_mp = nn.Sequential(
-            nn.Linear(args.heads * hidden_dim, hidden_dim), nn.Dropout(args.dropout),
+            nn.Linear(hidden_dim, hidden_dim), nn.Dropout(self.dropout),
             nn.Linear(hidden_dim, output_dim))
-
-        self.dropout = args.dropout
-        self.num_layers = args.num_layers
-
-        self.emb = emb
+        
 
     def forward(self, data):
-        x, edge_index, batch = data.x, data.edge_index, data.batch
+        x, edge_index = data.x, data.edge_index
 
         for i in range(self.num_layers):
             x = self.convs[i](x, edge_index)
