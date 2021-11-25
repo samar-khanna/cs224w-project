@@ -25,7 +25,6 @@ class GNNStack(torch.nn.Module):
         self.post_mp = nn.Sequential(
             nn.Linear(hidden_dim, hidden_dim), nn.Dropout(self.dropout),
             nn.Linear(hidden_dim, output_dim))
-        
 
     def forward(self, x, edge_index):
         for i in range(self.num_layers):
@@ -35,7 +34,7 @@ class GNNStack(torch.nn.Module):
 
         x = self.post_mp(x)
 
-        if self.emb == True:
+        if self.emb:
             return x
 
         return F.log_softmax(x, dim=1)
