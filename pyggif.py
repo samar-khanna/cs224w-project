@@ -128,4 +128,5 @@ if __name__ == "__main__":
 
     figsize = (5,5)
     file_path = './figs'
+    os.makedirs(file_path, exist_ok=True)
     visualize(base_graph_edges,new_nodes,new_given_edges,pred_new_node_edges,correct_new_edge,figsize, file_path)
