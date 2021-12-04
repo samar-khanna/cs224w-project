@@ -1,6 +1,10 @@
+import pickle
+
 import torch
+
 print(torch.__version__)
 import torch_geometric
+
 print(torch_geometric.__version__)
 import networkx as nx
 import matplotlib.pyplot as plt
@@ -9,7 +13,9 @@ import collections
 import imageio
 import os
 
-def visualize(base_graph_edges,new_nodes,new_given_edges,pred_new_node_edges,correct_new_edge,figsize, file_path):
+
+def visualize(base_graph_edges, new_nodes, new_given_edges, pred_new_node_edges, correct_new_edge, figsize, file_path):
+    os.makedirs(file_path, exist_ok=True)
     G_skel = nx.Graph()
     G_skel.add_edges_from(base_graph_edges)
     for edge_list in pred_new_node_edges:
@@ -17,7 +23,7 @@ def visualize(base_graph_edges,new_nodes,new_given_edges,pred_new_node_edges,cor
     for edge_list in correct_new_edge:
         G_skel.add_edges_from(edge_list)
     for edge_list in new_given_edges:
-        G_skel.add_edges_from(edge_list) 
+        G_skel.add_edges_from(edge_list)
     pos = nx.spring_layout(G_skel)
 
     min_x_pos = 10000
@@ -25,18 +31,18 @@ def visualize(base_graph_edges,new_nodes,new_given_edges,pred_new_node_edges,cor
     min_y_pos = 10000
     max_y_pos = -10000
 
-    for k,v in pos.items():
-        min_x_pos = min(min_x_pos,v[0])
-        min_y_pos = min(min_y_pos,v[1])
-        max_x_pos = max(max_x_pos,v[0])
-        max_y_pos = max(max_y_pos,v[1])
+    for k, v in pos.items():
+        min_x_pos = min(min_x_pos, v[0])
+        min_y_pos = min(min_y_pos, v[1])
+        max_x_pos = max(max_x_pos, v[0])
+        max_y_pos = max(max_y_pos, v[1])
 
-    print(min_x_pos,max_x_pos,min_y_pos,max_y_pos)
+    print(min_x_pos, max_x_pos, min_y_pos, max_y_pos)
 
-    min_x_pos -=0.5
-    min_y_pos -=0.5
-    max_x_pos +=0.5
-    max_y_pos +=0.5
+    min_x_pos -= 0.5
+    min_y_pos -= 0.5
+    max_x_pos += 0.5
+    max_y_pos += 0.5
 
     filenames = []
 
@@ -44,14 +50,14 @@ def visualize(base_graph_edges,new_nodes,new_given_edges,pred_new_node_edges,cor
     G_old = nx.Graph()
     G_old.add_edges_from(base_graph_edges)
     plt.figure(figsize=figsize)
-    plt.xlim(min_x_pos,max_x_pos)
-    plt.ylim(min_y_pos,max_y_pos)
-    pos_old = {i:pos[i] for i in G_old.nodes()}
-    node_labels_old = {i:i for i in G_old.nodes()}
+    plt.xlim(min_x_pos, max_x_pos)
+    plt.ylim(min_y_pos, max_y_pos)
+    pos_old = {i: pos[i] for i in G_old.nodes()}
+    node_labels_old = {i: i for i in G_old.nodes()}
     node_color_old = ['b' for node in G_old.nodes()]
 
-    nx.draw(G_old, pos=pos_old,node_color=node_color_old, labels=node_labels_old, font_color='white')
-    filename = os.path.join(file_path,f'{0}.png')
+    nx.draw(G_old, pos=pos_old, node_color=node_color_old, labels=node_labels_old, font_color='white')
+    filename = os.path.join(file_path, f'{0}.png')
     filenames.append(filename)
     plt.savefig(filename)
 
@@ -60,8 +66,8 @@ def visualize(base_graph_edges,new_nodes,new_given_edges,pred_new_node_edges,cor
     G_pred.add_edges_from(base_graph_edges)
     edge_color = {}
 
-    pos_new = {i:pos[i] for i in G_pred.nodes()}
-    node_labels = {i:i for i in G_pred.nodes()}
+    pos_new = {i: pos[i] for i in G_pred.nodes()}
+    node_labels = {i: i for i in G_pred.nodes()}
 
     # Iterating over new nodes
     edges_learnt = []
@@ -86,7 +92,7 @@ def visualize(base_graph_edges,new_nodes,new_given_edges,pred_new_node_edges,cor
                 edge_color[edge] = 'blue'
                 edges_learnt.append(rev_edge)
                 # print("given ",edge)
-            elif rev_edge in correct_new_edge[index] and rev_edge in pred_new_node_edges[index] :
+            elif rev_edge in correct_new_edge[index] and rev_edge in pred_new_node_edges[index]:
                 edge_color[edge] = 'green'
                 edges_learnt.append(rev_edge)
                 # print(edge, "is correct")
@@ -99,18 +105,19 @@ def visualize(base_graph_edges,new_nodes,new_given_edges,pred_new_node_edges,cor
             # print('edges learnt so far')
             # print(edges_learnt)
             # print('-------')
-        node_color = ['r' if node==new_node else 'b' for node in G_pred.nodes()]
+        node_color = ['r' if node == new_node else 'b' for node in G_pred.nodes()]
         ec = collections.OrderedDict(sorted(edge_color.items()))
         plt.figure(figsize=figsize)
-        plt.xlim(min_x_pos,max_x_pos)
-        plt.ylim(min_y_pos,max_y_pos)
-        nx.draw(G_pred, pos=pos_new, labels=node_labels, edge_color=ec.values(), node_color=node_color, font_color='white')
-        filename = os.path.join(file_path,f'{index+1}.png')
+        plt.xlim(min_x_pos, max_x_pos)
+        plt.ylim(min_y_pos, max_y_pos)
+        nx.draw(G_pred, pos=pos_new, labels=node_labels, edge_color=ec.values(), node_color=node_color,
+                font_color='white')
+        filename = os.path.join(file_path, f'{index + 1}.png')
         filenames.append(filename)
         plt.savefig(filename)
 
     # make gif
-    with imageio.get_writer(os.path.join(file_path,'online_link_pred.gif'), mode='I') as writer:
+    with imageio.get_writer(os.path.join(file_path, 'online_link_pred.gif'), mode='I') as writer:
         for filename in filenames:
             image = imageio.imread(filename)
             writer.append_data(image)
@@ -119,14 +126,23 @@ def visualize(base_graph_edges,new_nodes,new_given_edges,pred_new_node_edges,cor
     for filename in set(filenames):
         os.remove(filename)
 
-if __name__ == "__main__":
-    base_graph_edges = [(1,2),(1,3),(2,3),(2,4),(3,4)]
-    new_nodes = [5,6,7]
-    new_given_edges = [[(5,2)],[(6,4)],[]]
-    pred_new_node_edges = [[(5,1),(5,4)],[(6,2),(6,5)],[(7,1),(7,5)]]
-    correct_new_edge = [[(5,1),(5,3)],[(6,2),(6,5)],[(7,2)]]
 
-    figsize = (5,5)
+if __name__ == "__main__":
+    base_graph_edges = [(1, 2), (1, 3), (2, 3), (2, 4), (3, 4)]
+    new_nodes = [5, 6, 7]
+    new_given_edges = [[(5, 2)], [(6, 4)], []]
+    pred_new_node_edges = [[(5, 1), (5, 4)], [(6, 2), (6, 5)], [(7, 1), (7, 5)]]
+    correct_new_edge = [[(5, 1), (5, 3)], [(6, 2), (6, 5)], [(7, 2)]]
+
+    with open('./dataset/online_init:100_online:10', 'rb') as f:
+        dataset = pickle.load(f)
+
+    base_graph_edges = dataset['init_edge_index'].T.tolist()
+    new_nodes = list(dataset['online'].keys())
+    new_given_edges = [split['train_msg'].tolist() for n, split in dataset['online'].items()]
+    pred_new_node_edges = new_given_edges
+    correct_new_edge = new_given_edges
+
+    figsize = (5, 5)
     file_path = './figs'
-    os.makedirs(file_path, exist_ok=True)
-    visualize(base_graph_edges,new_nodes,new_given_edges,pred_new_node_edges,correct_new_edge,figsize, file_path)
+    visualize(base_graph_edges, new_nodes, new_given_edges, pred_new_node_edges, correct_new_edge, figsize, file_path)
