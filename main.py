@@ -11,6 +11,7 @@ import torch.optim as optim
 def main():
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
+    epochs = 50
     hidden_dim = 32
     dropout = 0.5
     num_layers = 4
@@ -39,7 +40,8 @@ def main():
         list(model.parameters()) + list(link_predictor.parameters()) + list(emb.parameters()),
         lr=lr, weight_decay=optim_wd
     )
-    train(model, link_predictor, emb.weight, edge_index, pos_train_edge, batch_size, optimizer)
+    for e in range(epochs):
+        train(model, link_predictor, emb.weight, edge_index, pos_train_edge, batch_size, optimizer)
 
 
 if __name__ == "__main__":
