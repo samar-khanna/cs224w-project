@@ -52,9 +52,9 @@ if __name__ == "__main__":
     with open(path_to_dataset, 'rb') as f:
         dataset = pickle.load(f)
 
-    init_nodes = dataset['init_nodes']
-    init_edge_index = dataset['init_edge_index']
-    init_pos_train = init_edge_index[:, ::2]  # Relying on order
+    init_nodes = dataset['init_nodes'].to(device)
+    init_edge_index = dataset['init_edge_index'].to(device)
+    init_pos_train = init_edge_index[:, ::2].to(device)  # Relying on order
 
     online_node_edge_index = dataset['online']
 
