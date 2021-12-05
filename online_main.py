@@ -17,7 +17,8 @@ from online_train import online_train, online_eval
 
 def passed_arguments():
     parser = argparse.ArgumentParser(description="Script to train online graph setting")
-    parser.add_argument('--data_path', type=str, default='./dataset/online_init:1000-online_nodes:10-seed:0.pkl',
+    parser.add_argument('--data_path', type=str,
+                        default='./dataset/online_init:1000-online_nodes:10-seed:0.pkl',
                         help='Path to data .pkl file')
     parser.add_argument('--model_dir', type=str, default=None,
                         help="Path to exp dir for model weights")
@@ -95,6 +96,9 @@ if __name__ == "__main__":
 
         # Create new embedding for n_id
         # optimizer.param_groups[0]['params'].extend(node_emb.parameters())
+
+        # Warm start embedding for new node
+        emb.weight[n_id] = emb.weight[:n_id].mean(dim=0)
 
         # Nodes are ordered sequentially (online node ids start at len(init_nodes))
         for t in range(num_online_steps):
