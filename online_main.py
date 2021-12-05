@@ -1,5 +1,8 @@
+import os
+
 import torch
 import pickle
+import argparse
 from ogb.linkproppred import PygLinkPropPredDataset
 from torch.optim import optimizer
 from torch_geometric.data import DataLoader
@@ -12,10 +15,21 @@ from train import train
 from online_train import online_train, online_eval
 
 
+def passed_arguments():
+    parser = argparse.ArgumentParser(description="Script to train online graph setting")
+    parser.add_argument('--data_path', type=str, default='./dataset/online_init:1000-online_nodes:10-seed:0.pkl',
+                        help='Path to data .pkl file')
+    parser.add_argument('--model_dir', type=str, default=None,
+                        help="Path to exp dir for model weights")
+    return parser.parse_args()
+
+
 if __name__ == "__main__":
+    args = passed_arguments()
+
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-    init_train_epochs = 100
+    init_train_epochs = 2
     num_online_steps = 5
     hidden_dim = 32
     dropout = 0.5
@@ -24,7 +38,15 @@ if __name__ == "__main__":
     optim_wd = 0
     node_emb_dim = 256
     batch_size = 16
-    path_to_dataset = './dataset/online_init:1000_online:10.pkl'
+    path_to_dataset = args.data_path
+    model_dir = args.model_path
+    if model_dir is None:
+        exp_dir = "./experiments"
+        model_dir = f"online.epochs:{init_train_epochs}.online_steps:{num_online_steps}" \
+                     f".layers:{num_layers}.hidden_dim:{hidden_dim}.node_dim:{node_emb_dim}" \
+                     f".lr:{lr}.optim_wd:{optim_wd}.batch_size:{batch_size}"
+        model_dir = os.path.join(exp_dir, model_dir)
+        os.makedirs(model_dir, exist_ok=True)
 
     with open(path_to_dataset, 'rb') as f:
         dataset = pickle.load(f)
@@ -45,31 +67,28 @@ if __name__ == "__main__":
     )
 
     # Train on initial subgraph
-    # for e in range(init_train_epochs):
-    #     train(model, link_predictor, emb.weight[:len(init_nodes)], init_edge_index, init_pos_train,
-    #           batch_size, optimizer)
+    for e in range(init_train_epochs):
+        train(model, link_predictor, emb.weight[:len(init_nodes)], init_edge_index, init_pos_train,
+              batch_size, optimizer)
+        torch.save(model.state_dict(), os.path.join(model_dir, f"init_train:{e}.pt"))
 
     curr_nodes = init_nodes
     curr_edge_index = init_edge_index  # (2, E)
     for n_id, node_split in online_node_edge_index.items():
-        train_msg, train_sup, valid, test = \
-            node_split['train_msg'], node_split['train_sup'], node_split['valid'], node_split['test']
+        train_msg, train_sup, train_neg, valid, valid_neg, test, test_neg = \
+            node_split['train_msg'], node_split['train_sup'], node_split['train_neg'], \
+            node_split['valid'], node_split['valid_neg'], node_split['test'], node_split['test_neg']
 
-        print(train_msg.shape)
-        print(train_sup.shape)
-        print(valid.shape)
-        print(test.shape)
+        train_msg = train_msg.to(device)
+        train_sup = train_sup.to(device)
+        train_neg = train_neg.to(device)
+        valid = valid.to(device)
+        valid_neg = valid_neg.to(device)
+        test = test.to(device)
+        test_neg = test_neg.to(device)
 
         # Add message edges to edge index
         curr_edge_index = torch.cat((curr_edge_index, train_msg.T), dim=1)  # (2, E+Tr_msg)
-
-        # Create negative edges
-        anc_neg_edges = []
-        for n in curr_nodes:
-            if not torch.isin(n, torch.cat((train_msg, train_sup, valid, test), dim=0)):
-                anc_neg_edges.append((n_id, n))
-        anc_neg_edges = torch.as_tensor(anc_neg_edges, dtype=torch.long).to(device)
-        print(anc_neg_edges.shape)
 
         # Add new node to list of curr_nodes
         curr_nodes = torch.cat((curr_nodes, torch.as_tensor([n_id])))
@@ -80,17 +99,19 @@ if __name__ == "__main__":
         # Nodes are ordered sequentially (online node ids start at len(init_nodes))
         for t in range(num_online_steps):
             loss = online_train(model, link_predictor, emb.weight[:n_id+1],
-                                curr_edge_index, train_sup, anc_neg_edges, batch_size, optimizer, device)
+                                curr_edge_index, train_sup, train_neg, batch_size, optimizer, device)
             print(f"Step {t+1}/{num_online_steps}: loss = {round(loss, 5)}")
+
+        torch.save(model.state_dict(), os.path.join(model_dir, f"online_id:{n_id}.pt"))
 
         # TODO: Is it fair to use same neg edges during train and val?
         val_tp, val_tn, val_fp, val_fn = online_eval(model, link_predictor, emb.weight[:n_id+1],
-                                                     curr_edge_index, valid, anc_neg_edges[:100], batch_size)
-        print(f"Val accuracy: {(val_tp + val_tn)/(val_tp + val_tn + val_fp + val_fn)}")
-        print(val_tp, val_tn, val_fp, val_fn)
+                                                     curr_edge_index, valid, valid_neg, batch_size)
+        print(f"VAL accuracy: {(val_tp + val_tn)/(val_tp + val_tn + val_fp + val_fn)}")
+        print(f"VAL tp: {val_tp.item()}, fn: {val_fn.item()}, tn: {val_tn.item()}, fp: {val_fp.item()}")
 
-        # test_tp, test_tn, test_fp, test_fn = online_eval(model, link_predictor, emb.weight[:n_id+1],
-        #                                                  curr_edge_index, valid, anc_neg_edges, batch_size)
+        test_tp, test_tn, test_fp, test_fn = online_eval(model, link_predictor, emb.weight[:n_id+1],
+                                                         curr_edge_index, valid, test_neg, batch_size)
 
-
-        # print(f"Test accuracy: {(test_tp + test_tn) / (test_tp + test_tn + test_fp + test_fn)}")
+        print(f"TEST accuracy: {(test_tp + test_tn) / (test_tp + test_tn + test_fp + test_fn)}")
+        print(f"TEST- tp: {test_tp.item()}, fn: {test_fn.item()}, tn: {test_tn.item()}, fp: {test_fp.item()}")

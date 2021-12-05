@@ -35,7 +35,6 @@ def online_train(model, link_predictor, emb, edge_index, pos_train_edge, neg_tra
         optimizer.step()
 
         train_losses.append(loss.item())
-        print(loss.item())
 
     return sum(train_losses) / len(train_losses)
 
