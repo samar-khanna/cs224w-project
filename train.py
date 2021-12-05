@@ -6,12 +6,10 @@ from torch_geometric.data import DataLoader
 from torch_geometric.utils import negative_sampling
 
 
-def train(model, link_predictor, emb, edge_index, split_edge, batch_size, optimizer, device):
+def train(model, link_predictor, emb, edge_index, pos_train_edge, batch_size, optimizer):
 
     model.train()
     link_predictor.train()
-
-    pos_train_edge = split_edge['train']['edge'].to(device)
 
     train_losses = []
     val_accs = []

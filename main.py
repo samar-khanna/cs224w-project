@@ -22,6 +22,7 @@ def main():
     # Download and process data at './dataset/ogbl-ddi/'
     dataset = PygLinkPropPredDataset(name="ogbl-ddi", root='./dataset/')
     split_edge = dataset.get_edge_split()
+    pos_train_edge = split_edge['train']['edge'].to(device)
 
     graph = dataset[0]
     edge_index = graph.edge_index.to(device)
@@ -38,7 +39,7 @@ def main():
         list(model.parameters()) + list(link_predictor.parameters()) + list(emb.parameters()),
         lr=lr, weight_decay=optim_wd
     )
-    train(model, link_predictor, emb.weight, edge_index, split_edge, batch_size, optimizer, device)
+    train(model, link_predictor, emb.weight, edge_index, pos_train_edge, batch_size, optimizer)
 
 
 if __name__ == "__main__":
