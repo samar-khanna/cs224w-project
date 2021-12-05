@@ -40,7 +40,7 @@ if __name__ == "__main__":
     node_emb_dim = 256
     batch_size = 16
     path_to_dataset = args.data_path
-    model_dir = args.model_path
+    model_dir = args.model_dir
     if model_dir is None:
         exp_dir = "./experiments"
         model_dir = f"online.epochs:{init_train_epochs}.online_steps:{num_online_steps}" \
