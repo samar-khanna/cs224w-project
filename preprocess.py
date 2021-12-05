@@ -1,5 +1,7 @@
+import os
 import torch
 import pickle
+import argparse
 import numpy as np
 import torch_geometric as pyg
 from ogb.linkproppred import PygLinkPropPredDataset
@@ -9,7 +11,7 @@ class NoEdgeException(Exception):
     pass
 
 
-def create_online_edge_index(n_id, full_edge_index, curr_edge_index, curr_nodes,
+def create_online_edge_index(n_id, full_edge_index, curr_edge_index, curr_nodes, rng,
                              train_msg=0.4, train_sup=0.4, val_pct=0.1):
     curr_edges = curr_edge_index.T  # (CE, 2)
     edges = full_edge_index.T  # (E, 2)
@@ -21,7 +23,16 @@ def create_online_edge_index(n_id, full_edge_index, curr_edge_index, curr_nodes,
     # Then, only keep edges from node_id to nodes in current graph
     node_edges = torch.isin(all_node_edges[:, 1], curr_nodes)  # (D_all,)
     node_edges = all_node_edges[node_edges]  # (D, 2)
+    node_edges = node_edges[rng.permutation(node_edges.shape[0])]  # (D, 2)
     D = node_edges.shape[0]
+
+    # Create negative edges (avoid positive val and test edges, is this ok?)
+    neg_edges = []
+    for n in curr_nodes:
+        if not torch.isin(n, node_edges):
+            neg_edges.append((n_id, n))
+    neg_edges = torch.as_tensor(neg_edges, dtype=torch.long)  # (Ne, 2)
+    neg_edges = neg_edges[rng.permutation(neg_edges.shape[0])]  # (Ne, 2)
 
     # Then, split node edges into train/val/test
     train_msg_range = (0, int(train_msg*D))
@@ -35,6 +46,15 @@ def create_online_edge_index(n_id, full_edge_index, curr_edge_index, curr_nodes,
         'valid': node_edges[val_range[0]:val_range[1]],   # (Val, 2)
         'test': node_edges[test_range[0]:test_range[1]]  # (Test, 2)
     }
+
+    # Keep same number of neg edges for val/test as pos edges, give remaining to train
+    val_neg_range = (0, split['valid'].shape[0])
+    test_neg_range = (split['valid'].shape[0], split['valid'].shape[0] + split['test'].shape[0])
+    train_neg_range = (split['valid'].shape[0] + split['test'].shape[0], neg_edges.shape[0])
+
+    split['valid_neg'] = neg_edges[val_neg_range[0]:val_neg_range[1]]  # (Val, 2)
+    split['test_neg'] = neg_edges[test_neg_range[0]:test_neg_range[1]]  # (Val, 2)
+    split['train_neg'] = neg_edges[train_neg_range[0]:train_neg_range[1]]  # (Val, 2)
 
     # Msg edges need both (i,j) and (j,i)
     split['train_msg'] = torch.cat((split['train_msg'], split['train_msg'].flip(1)), dim=0)
@@ -90,7 +110,7 @@ def preprocess(outfile, init_cluster_size=1000, num_online=None, seed=0):
     for n in online_nodes.numpy():
         try:
             curr_edge_index, curr_nodes, node_split = \
-                create_online_edge_index(n, full_index, curr_edge_index, curr_nodes)
+                create_online_edge_index(n, full_index, curr_edge_index, curr_nodes, rng)
         except NoEdgeException as e:
             print(str(e))
             continue
@@ -106,3 +126,23 @@ def preprocess(outfile, init_cluster_size=1000, num_online=None, seed=0):
 
     with open(outfile, 'wb') as f:
         pickle.dump(dataset, f)
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Create online graph dataset")
+    parser.add_argument("--file_name", type=str, default=None,
+                        help="Path to outfile containing .pkl dataset")
+    parser.add_argument("--init_size", type=int, default=1000,
+                        help="Number of nodes in initial graph")
+    parser.add_argument("--num_online", type=int, default=10,
+                        help="Number of online nodes.")
+    parser.add_argument("--seed", type=int, default=0,
+                        help="Np random seed")
+    args = parser.parse_args()
+
+    file_name = args.file_name
+    if file_name is None:
+        file_name = f"online_init:{args.init_size}-online_nodes:{args.num_online}-seed:{args.seed}.pkl"
+        file_name = os.path.join('dataset', file_name)
+
+    preprocess(file_name, args.init_size, args.num_online, args.seed)
