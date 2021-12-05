@@ -92,7 +92,7 @@ if __name__ == "__main__":
         curr_edge_index = torch.cat((curr_edge_index, train_msg.T), dim=1)  # (2, E+Tr_msg)
 
         # Add new node to list of curr_nodes
-        curr_nodes = torch.cat((curr_nodes, torch.as_tensor([n_id])))
+        curr_nodes = torch.cat((curr_nodes, torch.as_tensor([n_id], device=device)))
 
         # Create new embedding for n_id
         # optimizer.param_groups[0]['params'].extend(node_emb.parameters())
