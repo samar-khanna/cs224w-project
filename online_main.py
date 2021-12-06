@@ -70,7 +70,7 @@ if __name__ == "__main__":
 
     # Train on initial subgraph
     for e in range(init_train_epochs):
-        loss = train(model, link_predictor, emb.weight[:len(init_nodes)], init_edge_index, init_pos_train,
+        loss = train(model, link_predictor, emb.weight[:len(init_nodes)], init_edge_index, init_pos_train.T,
                      init_train_batch_size, optimizer)
         print(f"Epoch {e+1} loss: {round(loss, 5)}")
         if (e + 1) % 20 == 0:
