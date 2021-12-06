@@ -13,7 +13,7 @@ import torch.optim as optim
 
 from train import train
 from online_train import online_train, online_eval
-
+from utils import print_and_log
 
 def passed_arguments():
     parser = argparse.ArgumentParser(description="Script to train online graph setting")
@@ -55,6 +55,12 @@ if __name__ == "__main__":
     os.makedirs(model_dir, exist_ok=True)
     os.makedirs(logs_dir, exist_ok=True)
 
+    logfile_path = os.path.join(logs_dir, 'log.txt')
+    if os.path.isfile(logfile_path):
+        logfile = open(logfile_path, "a", buffering=1)
+    else:
+        logfile = open(logfile_path, "w", buffering=1)
+
     with open(path_to_dataset, 'rb') as f:
         dataset = pickle.load(f)
 
@@ -77,7 +83,7 @@ if __name__ == "__main__":
     for e in range(init_train_epochs):
         loss = train(model, link_predictor, emb.weight[:len(init_nodes)], init_edge_index, init_pos_train.T,
                      init_train_batch_size, optimizer)
-        print(f"Epoch {e+1} loss: {round(loss, 5)}")
+        print_and_log(logfile,f"Epoch {e+1}/{init_train_epochs}: Loss = {round(loss, 5)}")
         if (e + 1) % 20 == 0:
             torch.save(model.state_dict(), os.path.join(model_dir, f"init_train:{e}.pt"))
 
@@ -113,18 +119,20 @@ if __name__ == "__main__":
         for t in range(num_online_steps):
             loss = online_train(model, link_predictor, emb.weight[:n_id+1],
                                 curr_edge_index, train_sup, train_neg, batch_size, optimizer, device)
-            print(f"Step {t+1}/{num_online_steps}: loss = {round(loss, 5)}")
+            print_and_log(logfile,f"Step {t+1}/{num_online_steps}: loss = {round(loss, 5)}")
 
         torch.save(model.state_dict(), os.path.join(model_dir, f"online_id:{n_id}.pt"))
 
         # TODO: Is it fair to use same neg edges during train and val?
         val_tp, val_tn, val_fp, val_fn = online_eval(model, link_predictor, emb.weight[:n_id+1],
                                                      curr_edge_index, valid, valid_neg, batch_size)
-        print(f"VAL accuracy: {(val_tp + val_tn)/(val_tp + val_tn + val_fp + val_fn)}")
-        print(f"VAL tp: {val_tp.item()}, fn: {val_fn.item()}, tn: {val_tn.item()}, fp: {val_fp.item()}")
+        print_and_log(logfile,f"VAL accuracy: {(val_tp + val_tn)/(val_tp + val_tn + val_fp + val_fn)}")
+        print_and_log(logfile,f"VAL tp: {val_tp.item()}, fn: {val_fn.item()}, tn: {val_tn.item()}, fp: {val_fp.item()}")
 
         test_tp, test_tn, test_fp, test_fn = online_eval(model, link_predictor, emb.weight[:n_id+1],
                                                          curr_edge_index, valid, test_neg, batch_size)
 
-        print(f"TEST accuracy: {(test_tp + test_tn) / (test_tp + test_tn + test_fp + test_fn)}")
-        print(f"TEST- tp: {test_tp.item()}, fn: {test_fn.item()}, tn: {test_tn.item()}, fp: {test_fp.item()}")
+        print_and_log(logfile,f"TEST accuracy: {(test_tp + test_tn) / (test_tp + test_tn + test_fp + test_fn)}")
+        print_and_log(logfile,f"TEST tp: {test_tp.item()}, fn: {test_fn.item()}, tn: {test_tn.item()}, fp: {test_fp.item()}")
+
+        logfile.close()
