@@ -79,8 +79,10 @@ def preprocess(outfile, init_cluster_size=1000, num_online=None, seed=0):
     edge_index = graph.edge_index.T  # (TrE, 2)
 
     # All train edges are in edge_index. None of val or test edges are in edge_index
-    val_edges = torch.cat((split_edge['valid']['edge'], split_edge['valid']['edge'].flip(1)), dim=0)
-    test_edges = torch.cat((split_edge['test']['edge'], split_edge['test']['edge'].flip(1)), dim=0)
+    val_edges = split_edge['valid']['edge'].repeat_interleave(2, dim=0)
+    val_edges[::2] = val_edges[::2].flip(1)
+    test_edges = split_edge['test']['edge'].repeat_interleave(2, dim=0)
+    test_edges[::2] = test_edges[::2].flip(1)
     full_index = torch.cat((edge_index, val_edges, test_edges), dim=0)  # (E, 2)
 
     nodes = np.arange(graph.num_nodes)
@@ -94,7 +96,7 @@ def preprocess(outfile, init_cluster_size=1000, num_online=None, seed=0):
     # Map edges to new ordering of nodes (where new node 0 = node_map[0])
     full_index = new_from_old[full_index].T  # (2, E)
 
-    # Initial node induced subgraph of all
+    # Initial node induced subgraph of all (keeps the interleaved structure)
     init_nodes = torch.arange(init_cluster_size)
     init_edge_index, _ = pyg.utils.subgraph(init_nodes, full_index)  # (2, InitEdges)
 
