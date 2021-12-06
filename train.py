@@ -34,7 +34,7 @@ def train(model, link_predictor, emb, edge_index, pos_train_edge, batch_size, op
         optimizer.step()
 
         train_losses.append(loss.item())
-        print(loss.item())
+        # print(loss.item())
 
     return sum(train_losses) / len(train_losses)
 

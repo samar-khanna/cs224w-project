@@ -55,7 +55,7 @@ if __name__ == "__main__":
 
     init_nodes = dataset['init_nodes'].to(device)
     init_edge_index = dataset['init_edge_index'].to(device)
-    init_pos_train = init_edge_index[:, ::2].to(device)  # Relying on order
+    init_pos_train = init_edge_index[:, ::2].to(device)  # Relying on interleaved order
 
     online_node_edge_index = dataset['online']
 
@@ -70,9 +70,11 @@ if __name__ == "__main__":
 
     # Train on initial subgraph
     for e in range(init_train_epochs):
-        train(model, link_predictor, emb.weight[:len(init_nodes)], init_edge_index, init_pos_train,
-              init_train_batch_size, optimizer)
-        torch.save(model.state_dict(), os.path.join(model_dir, f"init_train:{e}.pt"))
+        loss = train(model, link_predictor, emb.weight[:len(init_nodes)], init_edge_index, init_pos_train,
+                     init_train_batch_size, optimizer)
+        print(f"Epoch {e+1} loss: {round(loss, 5)}")
+        if (e + 1) % 20 == 0:
+            torch.save(model.state_dict(), os.path.join(model_dir, f"init_train:{e}.pt"))
 
     curr_nodes = init_nodes
     curr_edge_index = init_edge_index  # (2, E)

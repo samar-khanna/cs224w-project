@@ -41,7 +41,8 @@ def main():
         lr=lr, weight_decay=optim_wd
     )
     for e in range(epochs):
-        train(model, link_predictor, emb.weight, edge_index, pos_train_edge, batch_size, optimizer)
+        loss = train(model, link_predictor, emb.weight, edge_index, pos_train_edge, batch_size, optimizer)
+        print(f"Epoch {e + 1} loss: {round(loss, 5)}")
 
 
 if __name__ == "__main__":
