@@ -23,6 +23,21 @@ def passed_arguments():
                         help='Path to data .pkl file')
     parser.add_argument('--exp_dir', type=str, default=None,
                         help="Path to exp dir for model checkpoints and experiment logs")
+    parser.add_argument('--init_epochs', type=int, default=100,
+                        help="Number of epochs for initial subgraph training")
+    parser.add_argument('--online_steps', type=int, default=10,
+                        help="Number of gradient steps for online learning.")
+    parser.add_argument('--init_lr', type=float, default=1e-2,
+                        help="Learning rate for initial graph pre-training")
+    parser.add_argument('--online_lr', type=float, default=1e-2,
+                        help="Learning rate for online node learning")
+    parser.add_argument('--node_dim', type=int, default=256,
+                        help='Embedding dimension for nodes')
+    parser.add_argument('--init_batch_size', type=int, default=1024*64,
+                        help='Number of links per batch used in initial pre-training')
+    parser.add_argument('--online_batch_size', type=int, default=32,
+                        help='Number of links per batch used for online learning')
+    parser.add_argument()
     return parser.parse_args()
 
 
@@ -31,16 +46,18 @@ if __name__ == "__main__":
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-    init_train_epochs = 100
-    num_online_steps = 5
     hidden_dim = 32
     dropout = 0.5
     num_layers = 4
-    lr = 1e-2
     optim_wd = 0
-    node_emb_dim = 256
-    init_train_batch_size = 1024 * 64
-    batch_size = 32
+
+    init_train_epochs = args.init_epochs
+    num_online_steps = args.online_steps
+    init_lr = args.init_lr
+    online_lr = args.online_lr
+    node_emb_dim = args.node_dim
+    init_train_batch_size = args.init_batch_size
+    batch_size = args.online_batch_size
     path_to_dataset = args.data_path
     exp_dir = args.exp_dir
     if exp_dir is None:
@@ -77,7 +94,7 @@ if __name__ == "__main__":
 
     optimizer = optim.Adam(
         list(model.parameters()) + list(link_predictor.parameters()) + list(emb.parameters()),
-        lr=lr, weight_decay=optim_wd
+        lr=init_lr, weight_decay=optim_wd
     )
 
     # Train on initial subgraph
@@ -91,7 +108,7 @@ if __name__ == "__main__":
     # New optimizer for online learning
     optimizer = optim.Adam(
         list(link_predictor.parameters()) + list(emb.parameters()),
-        lr=lr, weight_decay=optim_wd
+        lr=online_lr, weight_decay=optim_wd
     )
 
     curr_nodes = init_nodes
