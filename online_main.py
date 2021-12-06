@@ -20,8 +20,8 @@ def passed_arguments():
     parser.add_argument('--data_path', type=str,
                         default='./dataset/online_init:1000-online_nodes:10-seed:0.pkl',
                         help='Path to data .pkl file')
-    parser.add_argument('--model_dir', type=str, default=None,
-                        help="Path to exp dir for model weights")
+    parser.add_argument('--exp_dir', type=str, default=None,
+                        help="Path to exp dir for model checkpoints and experiment logs")
     return parser.parse_args()
 
 
@@ -41,14 +41,19 @@ if __name__ == "__main__":
     init_train_batch_size = 1024 * 64
     batch_size = 32
     path_to_dataset = args.data_path
-    model_dir = args.model_dir
-    if model_dir is None:
+    exp_dir = args.exp_dir
+    if exp_dir is None:
         exp_dir = "./experiments"
-        model_dir = f"online.epochs:{init_train_epochs}.online_steps:{num_online_steps}" \
-                     f".layers:{num_layers}.hidden_dim:{hidden_dim}.node_dim:{node_emb_dim}" \
-                     f".lr:{lr}.optim_wd:{optim_wd}.batch_size:{batch_size}"
-        model_dir = os.path.join(exp_dir, model_dir)
-        os.makedirs(model_dir, exist_ok=True)
+        dir = f"online.epochs:{init_train_epochs}.online_steps:{num_online_steps}" \
+              f".layers:{num_layers}.hidden_dim:{hidden_dim}.node_dim:{node_emb_dim}" \
+              f".lr:{lr}.optim_wd:{optim_wd}.batch_size:{batch_size}"
+        exp_dir = os.path.join(exp_dir, dir)
+
+    model_dir = os.path.join(exp_dir, 'checkpoints')
+    logs_dir = os.path.join(exp_dir, 'logs')
+    os.makedirs(exp_dir, exist_ok=True)
+    os.makedirs(model_dir, exist_ok=True)
+    os.makedirs(logs_dir, exist_ok=True)
 
     with open(path_to_dataset, 'rb') as f:
         dataset = pickle.load(f)
