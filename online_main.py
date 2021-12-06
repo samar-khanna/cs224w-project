@@ -30,7 +30,7 @@ if __name__ == "__main__":
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-    init_train_epochs = 2
+    init_train_epochs = 100
     num_online_steps = 5
     hidden_dim = 32
     dropout = 0.5
@@ -38,7 +38,8 @@ if __name__ == "__main__":
     lr = 1e-2
     optim_wd = 0
     node_emb_dim = 256
-    batch_size = 16
+    init_train_batch_size = 1024 * 16
+    batch_size = 32
     path_to_dataset = args.data_path
     model_dir = args.model_dir
     if model_dir is None:
@@ -70,7 +71,7 @@ if __name__ == "__main__":
     # Train on initial subgraph
     for e in range(init_train_epochs):
         train(model, link_predictor, emb.weight[:len(init_nodes)], init_edge_index, init_pos_train,
-              batch_size, optimizer)
+              init_train_batch_size, optimizer)
         torch.save(model.state_dict(), os.path.join(model_dir, f"init_train:{e}.pt"))
 
     curr_nodes = init_nodes
@@ -98,7 +99,7 @@ if __name__ == "__main__":
         # optimizer.param_groups[0]['params'].extend(node_emb.parameters())
 
         # Warm start embedding for new node
-        emb.weight[n_id] = emb.weight[:n_id].mean(dim=0)
+        emb.weight.data[n_id] = emb.weight[:n_id].mean(dim=0)
 
         # Nodes are ordered sequentially (online node ids start at len(init_nodes))
         for t in range(num_online_steps):
