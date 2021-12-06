@@ -57,7 +57,8 @@ def create_online_edge_index(n_id, full_edge_index, curr_edge_index, curr_nodes,
     split['train_neg'] = neg_edges[train_neg_range[0]:train_neg_range[1]]  # (Val, 2)
 
     # Msg edges need both (i,j) and (j,i)
-    split['train_msg'] = torch.cat((split['train_msg'], split['train_msg'].flip(1)), dim=0)
+    split['train_msg'] = split['train_msg'].repeat_interleave(2, dim=0)
+    split['train_msg'][::2] = split['train_msg'][::2].flip(1)
 
     for k, edges in split.items():
         if len(edges) == 0:
