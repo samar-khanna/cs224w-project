@@ -15,6 +15,7 @@ from train import train
 from online_train import online_train, online_eval
 from utils import print_and_log
 
+
 def passed_arguments():
     parser = argparse.ArgumentParser(description="Script to train online graph setting")
     parser.add_argument('--data_path', type=str,
@@ -86,6 +87,12 @@ if __name__ == "__main__":
         print_and_log(logfile,f"Epoch {e+1}/{init_train_epochs}: Loss = {round(loss, 5)}")
         if (e + 1) % 20 == 0:
             torch.save(model.state_dict(), os.path.join(model_dir, f"init_train:{e}.pt"))
+
+    # New optimizer for online learning
+    optimizer = optim.Adam(
+        list(link_predictor.parameters()) + list(emb.parameters()),
+        lr=lr, weight_decay=optim_wd
+    )
 
     curr_nodes = init_nodes
     curr_edge_index = init_edge_index  # (2, E)
