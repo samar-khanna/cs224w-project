@@ -55,15 +55,28 @@ if __name__ == "__main__":
     init_lr = args.init_lr
     online_lr = args.online_lr
     node_emb_dim = args.node_dim
-    init_train_batch_size = args.init_batch_size
-    batch_size = args.online_batch_size
+    init_batch_size = args.init_batch_size
+    online_batch_size = args.online_batch_size
     path_to_dataset = args.data_path
     exp_dir = args.exp_dir
+
+    # Get dataset
+    with open(path_to_dataset, 'rb') as f:
+        dataset = pickle.load(f)
+
+    init_nodes = dataset['init_nodes'].to(device)
+    init_edge_index = dataset['init_edge_index'].to(device)
+    init_pos_train = init_edge_index[:, ::2].to(device)  # Relying on interleaved order
+
+    online_node_edge_index = dataset['online']
+
     if exp_dir is None:
         exp_dir = "./experiments"
-        dir = f"online.epochs:{init_train_epochs}.online_steps:{num_online_steps}" \
+        dir = f"online.init_nodes:{len(init_nodes)}.num_online:{len(online_node_edge_index)}" \
+              f".epochs:{init_train_epochs}.online_steps:{num_online_steps}" \
               f".layers:{num_layers}.hidden_dim:{hidden_dim}.node_dim:{node_emb_dim}" \
-              f".lr:{lr}.optim_wd:{optim_wd}.batch_size:{batch_size}"
+              f".init_lr:{init_lr}.online_lr:{online_lr}.optim_wd:{optim_wd}" \
+              f".init_batch_size:{init_batch_size}.online_batch_size:{online_batch_size}"
         exp_dir = os.path.join(exp_dir, dir)
 
     model_dir = os.path.join(exp_dir, 'checkpoints')
@@ -78,15 +91,6 @@ if __name__ == "__main__":
     else:
         logfile = open(logfile_path, "w", buffering=1)
 
-    with open(path_to_dataset, 'rb') as f:
-        dataset = pickle.load(f)
-
-    init_nodes = dataset['init_nodes'].to(device)
-    init_edge_index = dataset['init_edge_index'].to(device)
-    init_pos_train = init_edge_index[:, ::2].to(device)  # Relying on interleaved order
-
-    online_node_edge_index = dataset['online']
-
     emb = torch.nn.Embedding(len(init_nodes) + len(online_node_edge_index), node_emb_dim).to(device)
     model = GNNStack(node_emb_dim, hidden_dim, hidden_dim, num_layers, dropout, emb=True).to(device)
     link_predictor = LinkPredictor(hidden_dim, hidden_dim, 1, num_layers + 1, dropout).to(device)
@@ -99,7 +103,7 @@ if __name__ == "__main__":
     # Train on initial subgraph
     for e in range(init_train_epochs):
         loss = train(model, link_predictor, emb.weight[:len(init_nodes)], init_edge_index, init_pos_train.T,
-                     init_train_batch_size, optimizer)
+                     init_batch_size, optimizer)
         print_and_log(logfile,f"Epoch {e+1}/{init_train_epochs}: Loss = {round(loss, 5)}")
         if (e + 1) % 20 == 0:
             torch.save(model.state_dict(), os.path.join(model_dir, f"init_train:{e}.pt"))
@@ -141,19 +145,19 @@ if __name__ == "__main__":
         # Nodes are ordered sequentially (online node ids start at len(init_nodes))
         for t in range(num_online_steps):
             loss = online_train(model, link_predictor, emb.weight[:n_id+1],
-                                curr_edge_index, train_sup, train_neg, batch_size, optimizer, device)
+                                curr_edge_index, train_sup, train_neg, online_batch_size, optimizer, device)
             print_and_log(logfile,f"Step {t+1}/{num_online_steps}: loss = {round(loss, 5)}")
 
         torch.save(model.state_dict(), os.path.join(model_dir, f"online_id:{n_id}.pt"))
 
         # TODO: Is it fair to use same neg edges during train and val?
         val_tp, val_tn, val_fp, val_fn = online_eval(model, link_predictor, emb.weight[:n_id+1],
-                                                     curr_edge_index, valid, valid_neg, batch_size)
+                                                     curr_edge_index, valid, valid_neg, online_batch_size)
         print_and_log(logfile,f"VAL accuracy: {(val_tp + val_tn)/(val_tp + val_tn + val_fp + val_fn)}")
         print_and_log(logfile,f"VAL tp: {val_tp.item()}, fn: {val_fn.item()}, tn: {val_tn.item()}, fp: {val_fp.item()}")
 
         test_tp, test_tn, test_fp, test_fn = online_eval(model, link_predictor, emb.weight[:n_id+1],
-                                                         curr_edge_index, valid, test_neg, batch_size)
+                                                         curr_edge_index, valid, test_neg, online_batch_size)
 
         print_and_log(logfile,f"TEST accuracy: {(test_tp + test_tn) / (test_tp + test_tn + test_fp + test_fn)}")
         print_and_log(logfile,f"TEST tp: {test_tp.item()}, fn: {test_fn.item()}, tn: {test_tn.item()}, fp: {test_fp.item()}")
