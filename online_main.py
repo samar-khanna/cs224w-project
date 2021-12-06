@@ -38,7 +38,7 @@ if __name__ == "__main__":
     lr = 1e-2
     optim_wd = 0
     node_emb_dim = 256
-    init_train_batch_size = 1024 * 16
+    init_train_batch_size = 1024 * 64
     batch_size = 32
     path_to_dataset = args.data_path
     model_dir = args.model_dir
@@ -99,7 +99,8 @@ if __name__ == "__main__":
         # optimizer.param_groups[0]['params'].extend(node_emb.parameters())
 
         # Warm start embedding for new node
-        emb.weight.data[n_id] = emb.weight[:n_id].mean(dim=0)
+        with torch.no_grad():
+            emb.weight[n_id] = emb.weight[:n_id].mean(dim=0)
 
         # Nodes are ordered sequentially (online node ids start at len(init_nodes))
         for t in range(num_online_steps):
