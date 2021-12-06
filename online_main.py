@@ -37,7 +37,6 @@ def passed_arguments():
                         help='Number of links per batch used in initial pre-training')
     parser.add_argument('--online_batch_size', type=int, default=32,
                         help='Number of links per batch used for online learning')
-    parser.add_argument()
     return parser.parse_args()
 
 
