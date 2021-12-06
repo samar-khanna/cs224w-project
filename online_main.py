@@ -142,4 +142,4 @@ if __name__ == "__main__":
         print_and_log(logfile,f"TEST accuracy: {(test_tp + test_tn) / (test_tp + test_tn + test_fp + test_fn)}")
         print_and_log(logfile,f"TEST tp: {test_tp.item()}, fn: {test_fn.item()}, tn: {test_tn.item()}, fp: {test_fp.item()}")
 
-        logfile.close()
+    logfile.close()
