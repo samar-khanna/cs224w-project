@@ -13,6 +13,22 @@ class NoEdgeException(Exception):
 
 def create_online_edge_index(n_id, full_edge_index, curr_edge_index, curr_nodes, rng,
                              train_msg=0.4, train_sup=0.4, val_pct=0.1):
+    """
+    Creates the train/val/test positive and negative edge index for online node id n_id,
+    given the split ratios for training message/supervision, and val and test edges
+    :param n_id: Node index for the online node being considered
+    :param full_edge_index: (2, E) tensor of ALL edges in the full graph
+    :param curr_edge_index: (2, Ec) tensor of edges in the current subgraph
+    :param curr_nodes: (N,) tensor of node indices in the current subgraph
+    :param rng: numpy random number generator
+    :param train_msg: Percentage of n_id's edges that will be used for train message passing
+    :param train_sup: Percentage of n_id's edges that will be used for train loss supervision
+    :param val_pct: Percentage of n_id's edges that will be used for validation metrics
+    :return:
+        (2, E_new) tensor of edges in the subgraph updated with node n_id's message edges
+        (N+1,) tensor of nodes in the subgraph updated with node n_id
+        dict(key, (E, 2) Tensor) of train msg/sup/neg edges, val pos/neg edges, test pos/neg edges
+    """
     curr_edges = curr_edge_index.T  # (CE, 2)
     edges = full_edge_index.T  # (E, 2)
 
@@ -35,15 +51,15 @@ def create_online_edge_index(n_id, full_edge_index, curr_edge_index, curr_nodes,
     neg_edges = neg_edges[rng.permutation(neg_edges.shape[0])]  # (Ne, 2)
 
     # Then, split node edges into train/val/test
-    train_msg_range = (0, int(train_msg*D))
-    train_sup_range = (train_msg_range[1], train_msg_range[1] + int(train_sup*D))
-    val_range = (train_sup_range[1], train_sup_range[1] + int(val_pct*D))
+    train_msg_range = (0, int(train_msg * D))
+    train_sup_range = (train_msg_range[1], train_msg_range[1] + int(train_sup * D))
+    val_range = (train_sup_range[1], train_sup_range[1] + int(val_pct * D))
     test_range = (val_range[1], D)
 
     split = {
         'train_msg': node_edges[train_msg_range[0]:train_msg_range[1]],  # (TrMsg, 2)
         'train_sup': node_edges[train_sup_range[0]:train_sup_range[1]],  # (TrSup, 2)
-        'valid': node_edges[val_range[0]:val_range[1]],   # (Val, 2)
+        'valid': node_edges[val_range[0]:val_range[1]],  # (Val, 2)
         'test': node_edges[test_range[0]:test_range[1]]  # (Test, 2)
     }
 
@@ -70,7 +86,19 @@ def create_online_edge_index(n_id, full_edge_index, curr_edge_index, curr_nodes,
            split
 
 
-def preprocess(outfile, init_cluster_size=1000, num_online=None, seed=0,split_train_msg=0.4,split_train_sp=0.4,split_val=0.1):
+def preprocess(outfile, init_cluster_size=1000, num_online=None, seed=0,
+               split_train_msg=0.4, split_train_sp=0.4, split_val=0.1):
+    """
+    Creates a dataset with an initial subgraph and a dictionary of online nodes
+    :param outfile: path to .pkl file where dataset will be saved
+    :param init_cluster_size: Number of nodes in initial subgraph
+    :param num_online: Number of nodes considered in online setting
+    :param seed: Numpy random number generator seed
+    :param split_train_msg: Percentage of each online node's edges used for train message passing
+    :param split_train_sp: Percentage of each online node's edges used for train loss supervision
+    :param split_val: Percentage of each online node's edges used for validation metrics
+    :return:
+    """
     rng = np.random.default_rng(seed)
 
     dataset = PygLinkPropPredDataset(name="ogbl-ddi", root='./dataset/')
@@ -113,7 +141,8 @@ def preprocess(outfile, init_cluster_size=1000, num_online=None, seed=0,split_tr
     for n in online_nodes.numpy():
         try:
             curr_edge_index, curr_nodes, node_split = \
-                create_online_edge_index(n, full_index, curr_edge_index, curr_nodes, rng, split_train_msg, split_train_sp, split_val)
+                create_online_edge_index(n, full_index, curr_edge_index, curr_nodes, rng, split_train_msg,
+                                         split_train_sp, split_val)
         except NoEdgeException as e:
             print(str(e))
             continue
@@ -154,4 +183,5 @@ if __name__ == "__main__":
         file_name = f"online_init:{args.init_size}-online_nodes:{args.num_online}-seed:{args.seed}.pkl"
         file_name = os.path.join('dataset', file_name)
 
-    preprocess(file_name, args.init_size, args.num_online, args.seed, args.split_train_msg,args.split_train_sp,args.split_val)
+    preprocess(file_name, args.init_size, args.num_online, args.seed,
+               args.split_train_msg, args.split_train_sp, args.split_val)
