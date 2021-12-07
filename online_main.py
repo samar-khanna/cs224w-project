@@ -90,7 +90,7 @@ if __name__ == "__main__":
     resfile = open(resfile_path, "a" if os.path.isfile(resfile_path) else "w", buffering=1)
 
     # Create embedding, model, and optimizer
-    emb = torch.nn.Embedding(len(init_nodes) + int(2*len(online_node_edge_index)), node_emb_dim).to(device)
+    emb = torch.nn.Embedding(len(init_nodes) + max(online_node_edge_index) + 1, node_emb_dim).to(device)
     model = GNNStack(node_emb_dim, hidden_dim, hidden_dim, num_layers, dropout, emb=True).to(device)
     link_predictor = LinkPredictor(hidden_dim, hidden_dim, 1, num_layers + 1, dropout).to(device)
 
@@ -139,7 +139,7 @@ if __name__ == "__main__":
 
         # Warm start embedding for new node
         with torch.no_grad():
-            emb.weight[n_id] = emb.weight[:n_id].mean(dim=0)
+            emb.weight[n_id] = emb.weight[curr_nodes].mean(dim=0)
 
         # Nodes are ordered sequentially (online node ids start at len(init_nodes))
         for t in range(num_online_steps):
