@@ -180,7 +180,8 @@ if __name__ == "__main__":
 
     file_name = args.file_name
     if file_name is None:
-        file_name = f"online_init:{args.init_size}-online_nodes:{args.num_online}-seed:{args.seed}.pkl"
+        split_test = 1.0 - args.split_train_msg - args.split_train_sp - args.split_val
+        file_name = f"online_init:{args.init_size}-online_nodes:{args.num_online}-split:{args.split_train_msg}_{args.split_train_sp}_{args.split_val}_{split_test}-seed:{args.seed}.pkl"
         file_name = os.path.join('dataset', file_name)
 
     preprocess(file_name, args.init_size, args.num_online, args.seed,

@@ -71,7 +71,7 @@ if __name__ == "__main__":
     # Configure experiment saving directories
     if exp_dir is None:
         exp_dir = "./experiments"
-        dir = f"online.init_nodes:{len(init_nodes)}.num_online:{len(online_node_edge_index)}" \
+        dir = f"online.init_nodes:{len(init_nodes)}.num_online:{len(online_node_edge_index)}.{path_to_dataset.split('-')[2]}" \
               f".epochs:{init_train_epochs}.online_steps:{num_online_steps}" \
               f".layers:{num_layers}.hidden_dim:{hidden_dim}.node_dim:{node_emb_dim}" \
               f".init_lr:{init_lr}.online_lr:{online_lr}.optim_wd:{optim_wd}" \
