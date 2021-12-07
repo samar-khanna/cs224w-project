@@ -12,10 +12,6 @@ def train(model, link_predictor, emb, edge_index, pos_train_edge, batch_size, op
     link_predictor.train()
 
     train_losses = []
-    val_accs = []
-    best_acc = 0
-    best_model = None
-    scheduler = None
 
     for edge_id in DataLoader(range(pos_train_edge.shape[0]), batch_size, shuffle=True):
         optimizer.zero_grad()
@@ -37,14 +33,3 @@ def train(model, link_predictor, emb, edge_index, pos_train_edge, batch_size, op
         # print(loss.item())
 
     return sum(train_losses) / len(train_losses)
-
-    # if epoch % 10 == 0:
-    #   val_acc = evaluate(val_loader, model)
-    #   val_accs.append(val_acc)
-    #   if val_acc > best_acc:
-    #     best_acc = val_acc
-    #     best_model = copy.deepcopy(model)
-    # else:
-    #   val_accs.append(val_accs[-1])
-
-    # return val_accs, losses, best_model, best_acc
