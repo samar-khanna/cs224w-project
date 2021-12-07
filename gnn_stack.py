@@ -2,6 +2,7 @@ import torch
 import torch_scatter
 import torch.nn as nn
 import torch.nn.functional as F
+import torch_geometric as pyg
 
 from graph_sage import GraphSage
 
@@ -9,7 +10,7 @@ from graph_sage import GraphSage
 class GNNStack(torch.nn.Module):
     def __init__(self, input_dim, hidden_dim, output_dim, num_layers, dropout, emb=False):
         super(GNNStack, self).__init__()
-        conv_model = GraphSage
+        conv_model = pyg.nn.SAGEConv
 
         self.convs = nn.ModuleList()
         self.convs.append(conv_model(input_dim, hidden_dim))
