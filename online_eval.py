@@ -33,5 +33,5 @@ def online_eval(model, link_predictor, emb, edge_index, pos_edges, neg_edges, ba
         tn += (neg_pred < 0.5).sum()
 
     if res_file is not None:
-        print_and_log(res_file,f"corr_pred = {pos_edge[pos_pred >= 0.5]} \ninc_pred = {neg_edge[neg_pred >= 0.5]}")
+        print_and_log(res_file,f"corr_pred = {pos_edge.T[pos_pred >= 0.5]} \ninc_pred = {neg_edge.T[neg_pred >= 0.5]}")
     return tp, tn, fp, fn
