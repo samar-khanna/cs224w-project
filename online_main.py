@@ -12,7 +12,8 @@ from link_predictor import LinkPredictor
 import torch.optim as optim
 
 from train import train
-from online_train import online_train, online_eval
+from online_train import online_train
+from online_eval import online_eval
 from utils import print_and_log
 
 
@@ -86,10 +87,13 @@ if __name__ == "__main__":
     os.makedirs(logs_dir, exist_ok=True)
 
     logfile_path = os.path.join(logs_dir, 'log.txt')
+    resfile_path = os.path.join(logs_dir, 'res.txt')
     if os.path.isfile(logfile_path):
         logfile = open(logfile_path, "a", buffering=1)
+        resfile = open(resfile_path, "a", buffering=1)
     else:
         logfile = open(logfile_path, "w", buffering=1)
+        resfile = open(resfile_path, "w", buffering=1)
 
     emb = torch.nn.Embedding(len(init_nodes) + len(online_node_edge_index), node_emb_dim).to(device)
     model = GNNStack(node_emb_dim, hidden_dim, hidden_dim, num_layers, dropout, emb=True).to(device)
@@ -151,15 +155,17 @@ if __name__ == "__main__":
         torch.save(model.state_dict(), os.path.join(model_dir, f"online_id:{n_id}.pt"))
 
         # TODO: Is it fair to use same neg edges during train and val?
+        print_and_log(resfile,f"For node {n_id}:")
         val_tp, val_tn, val_fp, val_fn = online_eval(model, link_predictor, emb.weight[:n_id+1],
-                                                     curr_edge_index, valid, valid_neg, online_batch_size)
+                                                     curr_edge_index, valid, valid_neg, online_batch_size,resfile)
         print_and_log(logfile,f"VAL accuracy: {(val_tp + val_tn)/(val_tp + val_tn + val_fp + val_fn)}")
         print_and_log(logfile,f"VAL tp: {val_tp.item()}, fn: {val_fn.item()}, tn: {val_tn.item()}, fp: {val_fp.item()}")
 
         test_tp, test_tn, test_fp, test_fn = online_eval(model, link_predictor, emb.weight[:n_id+1],
-                                                         curr_edge_index, valid, test_neg, online_batch_size)
+                                                         curr_edge_index, valid, test_neg, online_batch_size,resfile)
 
         print_and_log(logfile,f"TEST accuracy: {(test_tp + test_tn) / (test_tp + test_tn + test_fp + test_fn)}")
         print_and_log(logfile,f"TEST tp: {test_tp.item()}, fn: {test_fn.item()}, tn: {test_tn.item()}, fp: {test_fp.item()}")
 
     logfile.close()
+    resfile.close()

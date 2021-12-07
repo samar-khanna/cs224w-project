@@ -70,7 +70,7 @@ def create_online_edge_index(n_id, full_edge_index, curr_edge_index, curr_nodes,
            split
 
 
-def preprocess(outfile, init_cluster_size=1000, num_online=None, seed=0):
+def preprocess(outfile, init_cluster_size=1000, num_online=None, seed=0,split_train_msg=0.4,split_train_sp=0.4,split_val=0.1):
     rng = np.random.default_rng(seed)
 
     dataset = PygLinkPropPredDataset(name="ogbl-ddi", root='./dataset/')
@@ -113,7 +113,7 @@ def preprocess(outfile, init_cluster_size=1000, num_online=None, seed=0):
     for n in online_nodes.numpy():
         try:
             curr_edge_index, curr_nodes, node_split = \
-                create_online_edge_index(n, full_index, curr_edge_index, curr_nodes, rng)
+                create_online_edge_index(n, full_index, curr_edge_index, curr_nodes, rng, split_train_msg, split_train_sp, split_val)
         except NoEdgeException as e:
             print(str(e))
             continue
@@ -141,6 +141,12 @@ if __name__ == "__main__":
                         help="Number of online nodes.")
     parser.add_argument("--seed", type=int, default=0,
                         help="Np random seed")
+    parser.add_argument("split_train_msg", type=float, default=0.4,
+                        help="Fraction of edges as train message")
+    parser.add_argument("split_train_sp", type=float, default=0.4,
+                        help="Fraction of edges as train supervison")
+    parser.add_argument("split_val", type=float, default=0.1,
+                        help="Fraction of edges as val")
     args = parser.parse_args()
 
     file_name = args.file_name
@@ -148,4 +154,4 @@ if __name__ == "__main__":
         file_name = f"online_init:{args.init_size}-online_nodes:{args.num_online}-seed:{args.seed}.pkl"
         file_name = os.path.join('dataset', file_name)
 
-    preprocess(file_name, args.init_size, args.num_online, args.seed)
+    preprocess(file_name, args.init_size, args.num_online, args.seed, args.split_train_msg,args.split_train_sp,args.split_val)
