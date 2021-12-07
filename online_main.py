@@ -1,15 +1,12 @@
 import os
-
 import torch
 import pickle
 import argparse
-from ogb.linkproppred import PygLinkPropPredDataset
-from torch.optim import optimizer
-from torch_geometric.data import DataLoader
-from gnn_stack import GNNStack
-from train import train
-from link_predictor import LinkPredictor
 import torch.optim as optim
+from gnn_stack import GNNStack
+from link_predictor import LinkPredictor
+from torch_geometric.data import DataLoader
+from ogb.linkproppred import PygLinkPropPredDataset
 
 from train import train
 from online_train import online_train
@@ -34,7 +31,7 @@ def passed_arguments():
                         help="Learning rate for online node learning")
     parser.add_argument('--node_dim', type=int, default=256,
                         help='Embedding dimension for nodes')
-    parser.add_argument('--init_batch_size', type=int, default=1024*64,
+    parser.add_argument('--init_batch_size', type=int, default=1024 * 64,
                         help='Number of links per batch used in initial pre-training')
     parser.add_argument('--online_batch_size', type=int, default=32,
                         help='Number of links per batch used for online learning')
@@ -71,6 +68,7 @@ if __name__ == "__main__":
 
     online_node_edge_index = dataset['online']
 
+    # Configure experiment saving directories
     if exp_dir is None:
         exp_dir = "./experiments"
         dir = f"online.init_nodes:{len(init_nodes)}.num_online:{len(online_node_edge_index)}" \
@@ -88,14 +86,11 @@ if __name__ == "__main__":
 
     logfile_path = os.path.join(logs_dir, 'log.txt')
     resfile_path = os.path.join(logs_dir, 'res.txt')
-    if os.path.isfile(logfile_path):
-        logfile = open(logfile_path, "a", buffering=1)
-        resfile = open(resfile_path, "a", buffering=1)
-    else:
-        logfile = open(logfile_path, "w", buffering=1)
-        resfile = open(resfile_path, "w", buffering=1)
+    logfile = open(logfile_path, "a" if os.path.isfile(logfile_path) else "w", buffering=1)
+    resfile = open(resfile_path, "a" if os.path.isfile(resfile_path) else "w", buffering=1)
 
-    emb = torch.nn.Embedding(len(init_nodes) + len(online_node_edge_index), node_emb_dim).to(device)
+    # Create embedding, model, and optimizer
+    emb = torch.nn.Embedding(len(init_nodes) + int(2*len(online_node_edge_index)), node_emb_dim).to(device)
     model = GNNStack(node_emb_dim, hidden_dim, hidden_dim, num_layers, dropout, emb=True).to(device)
     link_predictor = LinkPredictor(hidden_dim, hidden_dim, 1, num_layers + 1, dropout).to(device)
 
@@ -108,11 +103,11 @@ if __name__ == "__main__":
     for e in range(init_train_epochs):
         loss = train(model, link_predictor, emb.weight[:len(init_nodes)], init_edge_index, init_pos_train.T,
                      init_batch_size, optimizer)
-        print_and_log(logfile,f"Epoch {e+1}/{init_train_epochs}: Loss = {round(loss, 5)}")
+        print_and_log(logfile, f"Epoch {e + 1}/{init_train_epochs}: Loss = {round(loss, 5)}")
         if (e + 1) % 20 == 0:
             torch.save(model.state_dict(), os.path.join(model_dir, f"init_train:{e}.pt"))
 
-    # New optimizer for online learning
+    # New optimizer for online learning (don't update GraphSAGE)
     optimizer = optim.Adam(
         list(link_predictor.parameters()) + list(emb.parameters()),
         lr=online_lr, weight_decay=optim_wd
@@ -148,24 +143,24 @@ if __name__ == "__main__":
 
         # Nodes are ordered sequentially (online node ids start at len(init_nodes))
         for t in range(num_online_steps):
-            loss = online_train(model, link_predictor, emb.weight[:n_id+1],
+            loss = online_train(model, link_predictor, emb.weight[:n_id + 1],
                                 curr_edge_index, train_sup, train_neg, online_batch_size, optimizer, device)
-            print_and_log(logfile,f"Step {t+1}/{num_online_steps}: loss = {round(loss, 5)}")
+            print_and_log(logfile, f"Step {t + 1}/{num_online_steps}: loss = {round(loss, 5)}")
 
         torch.save(model.state_dict(), os.path.join(model_dir, f"online_id:{n_id}.pt"))
 
-        # TODO: Is it fair to use same neg edges during train and val?
-        print_and_log(resfile,f"For node {n_id}:")
-        val_tp, val_tn, val_fp, val_fn = online_eval(model, link_predictor, emb.weight[:n_id+1],
-                                                     curr_edge_index, valid, valid_neg, online_batch_size,resfile)
-        print_and_log(logfile,f"VAL accuracy: {(val_tp + val_tn)/(val_tp + val_tn + val_fp + val_fn)}")
-        print_and_log(logfile,f"VAL tp: {val_tp.item()}, fn: {val_fn.item()}, tn: {val_tn.item()}, fp: {val_fp.item()}")
+        print_and_log(resfile, f"For node {n_id}:")
+        val_tp, val_tn, val_fp, val_fn = online_eval(model, link_predictor, emb.weight[:n_id + 1],
+                                                     curr_edge_index, valid, valid_neg, online_batch_size, resfile)
 
-        test_tp, test_tn, test_fp, test_fn = online_eval(model, link_predictor, emb.weight[:n_id+1],
-                                                         curr_edge_index, valid, test_neg, online_batch_size,resfile)
+        print_and_log(logfile, f"VAL accuracy: {(val_tp + val_tn) / (val_tp + val_tn + val_fp + val_fn)}")
+        print_and_log(logfile, f"VAL tp: {val_tp}, fn: {val_fn}, tn: {val_tn}, fp: {val_fp}")
 
-        print_and_log(logfile,f"TEST accuracy: {(test_tp + test_tn) / (test_tp + test_tn + test_fp + test_fn)}")
-        print_and_log(logfile,f"TEST tp: {test_tp.item()}, fn: {test_fn.item()}, tn: {test_tn.item()}, fp: {test_fp.item()}")
+        test_tp, test_tn, test_fp, test_fn = online_eval(model, link_predictor, emb.weight[:n_id + 1],
+                                                         curr_edge_index, valid, test_neg, online_batch_size, resfile)
+
+        print_and_log(logfile, f"TEST accuracy: {(test_tp + test_tn) / (test_tp + test_tn + test_fp + test_fn)}")
+        print_and_log(logfile, f"TEST tp: {test_tp}, fn: {test_fn}, tn: {test_tn}, fp: {test_fp}")
 
     logfile.close()
     resfile.close()
