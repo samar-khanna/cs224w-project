@@ -141,11 +141,11 @@ if __name__ == "__main__":
                         help="Number of online nodes.")
     parser.add_argument("--seed", type=int, default=0,
                         help="Np random seed")
-    parser.add_argument("split_train_msg", type=float, default=0.4,
+    parser.add_argument("--split_train_msg", type=float, default=0.4,
                         help="Fraction of edges as train message")
-    parser.add_argument("split_train_sp", type=float, default=0.4,
+    parser.add_argument("--split_train_sp", type=float, default=0.4,
                         help="Fraction of edges as train supervison")
-    parser.add_argument("split_val", type=float, default=0.1,
+    parser.add_argument("--split_val", type=float, default=0.1,
                         help="Fraction of edges as val")
     args = parser.parse_args()
 
