@@ -1,10 +1,7 @@
 import torch
-import torch_scatter
 import torch.nn as nn
 import torch.nn.functional as F
 import torch_geometric as pyg
-
-from graph_sage import GraphSage
 
 
 class GNNStack(torch.nn.Module):
