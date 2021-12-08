@@ -7,7 +7,7 @@ from torch_geometric.data import DataLoader
 from utils import log
 
 
-def online_eval(model, link_predictor, emb, edge_index, pos_edges, neg_edges, batch_size, res_file):
+def online_eval(model, link_predictor, emb, edge_index, pos_edges, neg_edges, batch_size):
     model.eval()
     link_predictor.eval()
 
@@ -33,6 +33,5 @@ def online_eval(model, link_predictor, emb, edge_index, pos_edges, neg_edges, ba
         fp += (neg_pred >= 0.5).sum().item()
         tn += (neg_pred < 0.5).sum().item()
 
-    if res_file is not None:
-        log(res_file, f"corr_pred = {pos_edge.T[pos_pred >= 0.5]} \ninc_pred = {neg_edge.T[neg_pred >= 0.5]}")
-    return tp, tn, fp, fn
+        preds = {'corr_pred': pos_edge.T[pos_pred >= 0.5].cpu(), 'inc_pred': neg_edge.T[neg_pred >= 0.5].cpu()}        
+    return tp, tn, fp, fn, preds
