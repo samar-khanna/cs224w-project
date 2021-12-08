@@ -14,13 +14,13 @@ from utils import print_and_log
 
 def main():
     parser = argparse.ArgumentParser(description="Script to train link prediction in offline graph setting")
-    parser.add_argument('--epochs', type=int, default=200,
+    parser.add_argument('--epochs', type=int, default=300,
                         help="Number of epochs for training")
-    parser.add_argument('--lr', type=float, default=5e-3,
+    parser.add_argument('--lr', type=float, default=3e-3,
                         help="Learning rate training")
     parser.add_argument('--node_dim', type=int, default=256,
                         help='Embedding dimension for nodes')
-    parser.add_argument('--dropout', type=float, default=0.5)
+    parser.add_argument('--dropout', type=float, default=0.3)
     parser.add_argument('--batch_size', type=int, default=64 * 1024)
     parser.add_argument('--num_layers', type=int, default=2)
     parser.add_argument('--hidden_channels', type=int, default=256)
@@ -78,8 +78,11 @@ def main():
         print_and_log(logfile,f"Epoch {e + 1}: loss: {round(loss, 5)}")
 
         if (e+1)%10 ==0:
+            torch.save(model.state_dict(), os.path.join(model_dir, f"model_{e+1}.pt"))
+            torch.save(emb.state_dict(), os.path.join(model_dir, f"emb_{e+1}.pt"))
+            torch.save(link_predictor.state_dict(), os.path.join(model_dir, f"link_pred_{e+1}.pt"))
             result = test(model, link_predictor, emb.weight, edge_index, split_edge, batch_size, evaluator)
-            print_and_log(logfile, result)
+            print_and_log(logfile, f"{result}")
     
     logfile.close()
 if __name__ == "__main__":

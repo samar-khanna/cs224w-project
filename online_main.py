@@ -85,9 +85,9 @@ if __name__ == "__main__":
     os.makedirs(logs_dir, exist_ok=True)
 
     logfile_path = os.path.join(logs_dir, 'log.txt')
-    resfile_path = os.path.join(logs_dir, 'res.txt')
+    resfile_val_path = os.path.join(logs_dir, 'res_val.pkl')
+    resfile_test_path = os.path.join(logs_dir, 'res_test.pkl')
     logfile = open(logfile_path, "a" if os.path.isfile(logfile_path) else "w", buffering=1)
-    resfile = open(resfile_path, "a" if os.path.isfile(resfile_path) else "w", buffering=1)
 
     # Create embedding, model, and optimizer
     emb = torch.nn.Embedding(len(init_nodes) + max(online_node_edge_index) + 1, node_emb_dim).to(device)
@@ -147,20 +147,28 @@ if __name__ == "__main__":
                                 curr_edge_index, train_sup, train_neg, online_batch_size, optimizer, device)
             print_and_log(logfile, f"Step {t + 1}/{num_online_steps}: loss = {round(loss, 5)}")
 
-        torch.save(model.state_dict(), os.path.join(model_dir, f"online_id:{n_id}.pt"))
+        torch.save(model.state_dict(), os.path.join(model_dir, f"online_id:{n_id}_model.pt"))
+        torch.save(emb.state_dict(), os.path.join(model_dir, f"online_id:{n_id}_emb.pt"))
+        torch.save(link_predictor.state_dict(), os.path.join(model_dir, f"online_id:{n_id}_lp.pt"))
+        val_res = {}
+        test_res = {}
+        val_tp, val_tn, val_fp, val_fn, preds = online_eval(model, link_predictor, emb.weight[:n_id + 1],
+                                                     curr_edge_index, valid, valid_neg, online_batch_size)
+        val_res[n_id] = preds
 
-        print_and_log(resfile, f"For node {n_id}:")
-        val_tp, val_tn, val_fp, val_fn = online_eval(model, link_predictor, emb.weight[:n_id + 1],
-                                                     curr_edge_index, valid, valid_neg, online_batch_size, resfile)
-
+        print_and_log(logfile,f"For node {n_id}")
         print_and_log(logfile, f"VAL accuracy: {(val_tp + val_tn) / (val_tp + val_tn + val_fp + val_fn)}")
         print_and_log(logfile, f"VAL tp: {val_tp}, fn: {val_fn}, tn: {val_tn}, fp: {val_fp}")
 
-        test_tp, test_tn, test_fp, test_fn = online_eval(model, link_predictor, emb.weight[:n_id + 1],
-                                                         curr_edge_index, valid, test_neg, online_batch_size, resfile)
-
+        test_tp, test_tn, test_fp, test_fn, preds = online_eval(model, link_predictor, emb.weight[:n_id + 1],
+                                                         curr_edge_index, valid, test_neg, online_batch_size,)
+        test_res[n_id] = preds
         print_and_log(logfile, f"TEST accuracy: {(test_tp + test_tn) / (test_tp + test_tn + test_fp + test_fn)}")
         print_and_log(logfile, f"TEST tp: {test_tp}, fn: {test_fn}, tn: {test_tn}, fp: {test_fp}")
-
+    
+    with open(resfile_val_path, 'wb') as f:
+        pickle.dump(val_res, f)
+    with open(resfile_test_path, 'wb') as f:
+        pickle.dump(test_res, f)
     logfile.close()
-    resfile.close()
+    
