@@ -115,6 +115,8 @@ if __name__ == "__main__":
 
     curr_nodes = init_nodes
     curr_edge_index = init_edge_index  # (2, E)
+    val_res = {}
+    test_res = {}
     for n_id, node_split in online_node_edge_index.items():
         train_msg, train_sup, train_neg, valid, valid_neg, test, test_neg = \
             node_split['train_msg'], node_split['train_sup'], node_split['train_neg'], \
@@ -150,8 +152,7 @@ if __name__ == "__main__":
         torch.save(model.state_dict(), os.path.join(model_dir, f"online_id:{n_id}_model.pt"))
         torch.save(emb.state_dict(), os.path.join(model_dir, f"online_id:{n_id}_emb.pt"))
         torch.save(link_predictor.state_dict(), os.path.join(model_dir, f"online_id:{n_id}_lp.pt"))
-        val_res = {}
-        test_res = {}
+
         val_tp, val_tn, val_fp, val_fn, preds = online_eval(model, link_predictor, emb.weight[:n_id + 1],
                                                      curr_edge_index, valid, valid_neg, online_batch_size)
         val_res[n_id] = preds
