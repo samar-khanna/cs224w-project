@@ -11,10 +11,6 @@ def online_train(model, link_predictor, emb, edge_index, pos_train_edge, neg_tra
     link_predictor.train()
 
     train_losses = []
-    val_accs = []
-    best_acc = 0
-    best_model = None
-    scheduler = None
 
     for edge_id in DataLoader(range(pos_train_edge.shape[0]), batch_size, shuffle=True):
         optimizer.zero_grad()
