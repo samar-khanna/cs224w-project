@@ -1,7 +1,19 @@
 import torch
 from torch_geometric.data import DataLoader
 
+
 def test(model, predictor, emb, edge_index, split_edge, batch_size, evaluator):
+    """
+    Evaluates graph model on validation and test edges
+    :param model: Torch Graph model used for updating node embeddings based on message passing
+    :param predictor: Torch model used for predicting whether edge exists or not
+    :param emb: (N, d) Initial node embeddings for all N nodes in graph
+    :param edge_index: (2, E) Edge index for all edges in the graph
+    :param split_edge: Dictionary of (e, 2) edges for val pos/neg and test pos/neg edges
+    :param batch_size: Number of positive (and negative) supervision edges to sample per batch
+    :param evaluator: OGB evaluator to calculate hits @ k metric
+    :return: hits @ k results
+    """
     model.eval()
     predictor.eval()
 

@@ -3,6 +3,18 @@ from torch_geometric.data import DataLoader
 
 
 def online_eval(model, link_predictor, emb, edge_index, pos_edges, neg_edges, batch_size):
+    """
+    Evaluates model on positive and negative edges for prediction
+    :param model: Torch Graph model used for updating node embeddings based on message passing
+    :param link_predictor: Torch model used for predicting whether edge exists or not
+    :param emb: (N+1, d) Initial node embeddings for all N nodes in subgraph, along with new online node
+    :param edge_index: (2, E) Edge index for edges in subgraph, along with message edges for online node
+    :param pos_edges: (PE, 2) Positive edges from online node to subgraph (previously unseen)
+    :param neg_edges: (PE, 2) Negative edges from online node to subgraph (previously unseen)
+    :param batch_size: Number of positive (and negative) supervision edges to sample per batch
+    :return: true positives, true negatives, false positives, false negatives, and
+        dict(true positive edges, false positive edges, false negative edges)
+    """
     model.eval()
     link_predictor.eval()
 
