@@ -1,10 +1,5 @@
 import torch
-import pickle
-import numpy as np
-import copy
-from tqdm import trange
 from torch_geometric.data import DataLoader
-from utils import log
 
 
 def online_eval(model, link_predictor, emb, edge_index, pos_edges, neg_edges, batch_size):
@@ -15,6 +10,10 @@ def online_eval(model, link_predictor, emb, edge_index, pos_edges, neg_edges, ba
     tn = 0.
     fp = 0.
     fn = 0.
+
+    tp_pred = torch.empty(0, dtype=pos_edges.dtype)
+    fp_pred = torch.empty(0, dtype=pos_edges.dtype)
+    fn_pred = torch.empty(0, dtype=pos_edges.dtype)
     for edge_id in DataLoader(range(pos_edges.shape[0]), batch_size, shuffle=False, drop_last=False):
         node_emb = model(emb, edge_index)  # (N, d)
 
@@ -23,6 +22,9 @@ def online_eval(model, link_predictor, emb, edge_index, pos_edges, neg_edges, ba
 
         tp += (pos_pred >= 0.5).sum().item()
         fn += (pos_pred < 0.5).sum().item()
+
+        tp_pred = torch.cat((tp_pred, pos_edge.T[pos_pred >= 0.5].cpu()), dim=0)
+        fn_pred = torch.cat((fn_pred, pos_edge.T[pos_pred < 0.5].cpu()), dim=0)
 
     for edge_id in DataLoader(range(neg_edges.shape[0]), batch_size, shuffle=False, drop_last=False):
         node_emb = model(emb, edge_index)  # (N, d)
@@ -33,5 +35,8 @@ def online_eval(model, link_predictor, emb, edge_index, pos_edges, neg_edges, ba
         fp += (neg_pred >= 0.5).sum().item()
         tn += (neg_pred < 0.5).sum().item()
 
-        preds = {'corr_pred': pos_edge.T[pos_pred >= 0.5].cpu(), 'inc_pred': neg_edge.T[neg_pred >= 0.5].cpu()}        
+        # Don't care about tn coz those are too many
+        fp_pred = torch.cat((fp_pred, neg_edge.T[neg_pred >= 0.5].cpu()), dim=0)
+
+    preds = {'tp_pred': tp_pred, 'fp_pred': fp_pred, 'fn_pred': fn_pred}
     return tp, tn, fp, fn, preds
