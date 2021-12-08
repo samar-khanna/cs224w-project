@@ -51,7 +51,7 @@ def main():
     os.makedirs(logs_dir, exist_ok=True)
     logfile_path = os.path.join(logs_dir, 'log.txt')
     logfile = open(logfile_path, "a" if os.path.isfile(logfile_path) else "w", buffering=1)
-    
+
     # Download and process data at './dataset/ogbl-ddi/'
     dataset = PygLinkPropPredDataset(name="ogbl-ddi", root='./dataset/')
     split_edge = dataset.get_edge_split()
@@ -62,6 +62,7 @@ def main():
 
     evaluator = Evaluator(name='ogbl-ddi')
 
+    # Create embedding, model, and optimizer
     emb = torch.nn.Embedding(graph.num_nodes, node_emb_dim).to(device)
     model = GNNStack(node_emb_dim, hidden_dim, hidden_dim, num_layers, dropout, emb=True).to(device)
     link_predictor = LinkPredictor(hidden_dim, hidden_dim, 1, num_layers + 1, dropout).to(device)
@@ -71,19 +72,19 @@ def main():
         lr=lr, weight_decay=optim_wd
     )
 
-    logfile = open(logfile_path, "a" if os.path.isfile(logfile_path) else "w", buffering=1)
-
     for e in range(epochs):
         loss = train(model, link_predictor, emb.weight, edge_index, pos_train_edge, batch_size, optimizer)
-        print_and_log(logfile,f"Epoch {e + 1}: loss: {round(loss, 5)}")
+        print_and_log(logfile, f"Epoch {e + 1}: loss: {round(loss, 5)}")
 
-        if (e+1)%10 ==0:
-            torch.save(model.state_dict(), os.path.join(model_dir, f"model_{e+1}.pt"))
-            torch.save(emb.state_dict(), os.path.join(model_dir, f"emb_{e+1}.pt"))
-            torch.save(link_predictor.state_dict(), os.path.join(model_dir, f"link_pred_{e+1}.pt"))
+        if (e + 1) % 10 == 0:
+            torch.save(model.state_dict(), os.path.join(model_dir, f"model_{e + 1}.pt"))
+            torch.save(emb.state_dict(), os.path.join(model_dir, f"emb_{e + 1}.pt"))
+            torch.save(link_predictor.state_dict(), os.path.join(model_dir, f"link_pred_{e + 1}.pt"))
             result = test(model, link_predictor, emb.weight, edge_index, split_edge, batch_size, evaluator)
             print_and_log(logfile, f"{result}")
-    
+
     logfile.close()
+
+
 if __name__ == "__main__":
     main()

@@ -115,8 +115,7 @@ if __name__ == "__main__":
 
     curr_nodes = init_nodes
     curr_edge_index = init_edge_index  # (2, E)
-    val_res = {}
-    test_res = {}
+    val_preds, test_preds = {}, {}
     for n_id, node_split in online_node_edge_index.items():
         train_msg, train_sup, train_neg, valid, valid_neg, test, test_neg = \
             node_split['train_msg'], node_split['train_sup'], node_split['train_neg'], \
@@ -155,21 +154,21 @@ if __name__ == "__main__":
 
         val_tp, val_tn, val_fp, val_fn, preds = online_eval(model, link_predictor, emb.weight[:n_id + 1],
                                                      curr_edge_index, valid, valid_neg, online_batch_size)
-        val_res[n_id] = preds
+        val_preds[n_id] = preds
+
+        test_tp, test_tn, test_fp, test_fn, preds = online_eval(model, link_predictor, emb.weight[:n_id + 1],
+                                                         curr_edge_index, valid, test_neg, online_batch_size,)
+        test_preds[n_id] = preds
 
         print_and_log(logfile,f"For node {n_id}")
         print_and_log(logfile, f"VAL accuracy: {(val_tp + val_tn) / (val_tp + val_tn + val_fp + val_fn)}")
         print_and_log(logfile, f"VAL tp: {val_tp}, fn: {val_fn}, tn: {val_tn}, fp: {val_fp}")
-
-        test_tp, test_tn, test_fp, test_fn, preds = online_eval(model, link_predictor, emb.weight[:n_id + 1],
-                                                         curr_edge_index, valid, test_neg, online_batch_size,)
-        test_res[n_id] = preds
         print_and_log(logfile, f"TEST accuracy: {(test_tp + test_tn) / (test_tp + test_tn + test_fp + test_fn)}")
         print_and_log(logfile, f"TEST tp: {test_tp}, fn: {test_fn}, tn: {test_tn}, fp: {test_fp}")
     
     with open(resfile_val_path, 'wb') as f:
-        pickle.dump(val_res, f)
+        pickle.dump(val_preds, f)
     with open(resfile_test_path, 'wb') as f:
-        pickle.dump(test_res, f)
+        pickle.dump(test_preds, f)
     logfile.close()
     

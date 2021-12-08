@@ -1,9 +1,7 @@
 import torch
-import pickle
 import numpy as np
-import copy
-from tqdm import trange
 from torch_geometric.data import DataLoader
+
 
 def online_train(model, link_predictor, emb, edge_index, pos_train_edge, neg_train_edges,
                  batch_size, optimizer, device):
