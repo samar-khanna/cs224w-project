@@ -1,25 +1,4 @@
-import torch
-import numpy as np
-import copy
-from tqdm import trange
-from torch_geometric.data import DataLoader
-from torch_geometric.utils import negative_sampling
-
-
 def train(model, link_predictor, emb, edge_index, pos_train_edge, batch_size, optimizer):
-    """
-    Runs offline training for model, link_predictor and node embeddings given the message
-    edges and supervision edges.
-    :param model: Torch Graph model used for updating node embeddings based on message passing
-    :param link_predictor: Torch model used for predicting whether edge exists or not
-    :param emb: (N, d) Initial node embeddings for all N nodes in graph
-    :param edge_index: (2, E) Edge index for all edges in the graph
-    :param pos_train_edge: (PE, 2) Positive edges used for training supervision loss
-    :param batch_size: Number of positive (and negative) supervision edges to sample per batch
-    :param optimizer: Torch Optimizer to update model parameters
-    :return: Average supervision loss over all positive (and correspondingly sampled negative) edges
-    """
-
     model.train()
     link_predictor.train()
 
@@ -42,6 +21,5 @@ def train(model, link_predictor, emb, edge_index, pos_train_edge, batch_size, op
         optimizer.step()
 
         train_losses.append(loss.item())
-        # print(loss.item())
 
     return sum(train_losses) / len(train_losses)

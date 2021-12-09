@@ -1,11 +1,3 @@
-'''
-Original Code from: https://github.com/lustoo/OGB_link_prediction/blob/d63217327156baea1173fc1b3a52d21e35e3d51e/DDI/link_pred_ddi_graphsage_edge.py#L368
-'''
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
-
-
 class LinkPredictor(nn.Module):
     def __init__(self, in_channels, hidden_channels, out_channels, num_layers,
                  dropout):
