@@ -1,4 +1,14 @@
 def online_eval(model, link_predictor, emb, edge_index, pos_edges, neg_edges, batch_size):
+    """
+    Evaluates model on positive and negative edges for prediction.
+    1. Computes the updated node embeddings given the existing subgraph and online node's message edges
+    2. Computes predictions on the positive edges, calculating:
+        a. True positives: number of positive edges correctly identified as positive
+        b. False negatives: number of positive edges falsely identified as negative
+    3. Computes predictions on the negative edges, calculating:
+        c. False positives: number of negative edges falsely identified as positive
+        d. True negatives: number of negative edges correctly identified as negative
+    """
     model.eval()
     link_predictor.eval()
 

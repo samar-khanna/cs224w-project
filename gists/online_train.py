@@ -1,5 +1,12 @@
 def online_train(model, link_predictor, emb, edge_index, pos_train_edge, neg_train_edges,
                  batch_size, optimizer, device):
+    """
+    Runs training for a single online node given its edges to the existing subgraph.
+    1. Updates node embeddings given the message edges for the online node and the existing subgraph edges
+    2. Computes predictions on the positive supervision edges for the online node
+    3. Computes predictions on the negative supervision edges for the online node
+    4. Computes the loss on the positive and negative edges and updates parameters
+    """
     model.train()
     link_predictor.train()
 

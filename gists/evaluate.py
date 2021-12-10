@@ -1,4 +1,10 @@
 def test(model, predictor, emb, edge_index, split_edge, batch_size, evaluator):
+    """
+    Evaluates model on positive and negative test edges
+    1. Computes the updated node embeddings given the edge index (i.e. the message passing edges)
+    2. Computes predictions on the positive and negative edges
+    3. Calculates hits @ k given predictions using the ogb evaluator
+    """
     model.eval()
     predictor.eval()
 

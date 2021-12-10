@@ -26,9 +26,11 @@ class GNNStack(torch.nn.Module):
 
         x = self.post_mp(x)
 
+        # Return node embeddings after post-message passing if specified
         if self.emb:
             return x
 
+        # Else return class probabilities for each node
         return F.log_softmax(x, dim=1)
 
     def loss(self, pred, label):

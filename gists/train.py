@@ -1,4 +1,12 @@
 def train(model, link_predictor, emb, edge_index, pos_train_edge, batch_size, optimizer):
+    """
+    Runs offline training for model, link_predictor and node embeddings given the message
+    edges and supervision edges.
+    1. Updates node embeddings given the edge index (i.e. the message passing edges)
+    2. Computes predictions on the positive supervision edges
+    3. Computes predictions on the negative supervision edges (which are sampled)
+    4. Computes the loss on the positive and negative edges and updates parameters
+    """
     model.train()
     link_predictor.train()
 
