@@ -8,4 +8,4 @@ Colab Link: https://colab.research.google.com/drive/1nb-BhjggQq4E7Ew9RxlydUbXF7T
 
 
 #
-Team Members: Samar Khanna ([**@Dieblitzen**](https://github.com/Dieblitzen)), Sarthak Consul ([**@SConsul**](https://github.com/SConsul)), Tanish Jain ([**@tanishjain**](https://github.com/tanishjain))
+Team Members: Samar Khanna ([**@samar-khanna**](https://github.com/Dieblitzen)), Sarthak Consul ([**@SConsul**](https://github.com/SConsul)), Tanish Jain ([**@tanishjain**](https://github.com/tanishjain))
